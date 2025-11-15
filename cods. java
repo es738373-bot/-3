@@ -1,0 +1,304 @@
+                                                                                                                                                        Бинарная куча 
+import java.util.ArrayList;
+import java.util.List;
+
+public class BinaryHeap {
+    private List<Integer> heap;
+
+    public BinaryHeap() {
+        heap = new ArrayList<>();
+    }
+
+    // Метод добавления нового элемента в кучу
+    public void add(int element) {
+        heap.add(element);
+        siftUp(heap.size() - 1);
+    }
+
+    // Метод удаления минимального элемента (корня)
+    public Integer removeMin() {
+        if (heap.isEmpty()) return null;
+        int removedElement = heap.get(0);
+        heap.set(0, heap.remove(heap.size() - 1));
+        siftDown(0);
+        return removedElement;
+    }
+
+    // Всплывающее перемещение вверх
+    private void siftUp(int index) {
+        while (index > 0) {
+            int parentIndex = (index - 1) / 2;
+            if (heap.get(index).compareTo(heap.get(parentIndex)) >= 0) break;
+            swap(index, parentIndex);
+            index = parentIndex;
+        }
+    }
+
+    // Проваливание вниз
+    private void siftDown(int index) {
+        int leftChildIndex = 2 * index + 1;
+        int rightChildIndex = 2 * index + 2;
+        int smallest = index;
+
+        if (leftChildIndex < heap.size() &&
+            heap.get(leftChildIndex).compareTo(heap.get(smallest)) < 0) {
+            smallest = leftChildIndex;
+        }
+
+        if (rightChildIndex < heap.size() &&
+            heap.get(rightChildIndex).compareTo(heap.get(smallest)) < 0) {
+            smallest = rightChildIndex;
+        }
+
+        if (smallest != index) {
+            swap(index, smallest);
+            siftDown(smallest);
+        }
+    }
+
+    // Простой метод для обмена значений
+    private void swap(int a, int b) {
+        int temp = heap.get(a);
+        heap.set(a, heap.get(b));
+        heap.set(b, temp);
+    }
+
+    @Override
+    public String toString() {
+        return heap.toString();
+    }
+}
+
+// Тестируем бинарную кучу
+public class Main {
+    public static void main(String[] args) {
+        BinaryHeap binaryHeap = new BinaryHeap();
+        binaryHeap.add(10);
+        binaryHeap.add(5);
+        binaryHeap.add(15);
+        binaryHeap.add(3);
+        System.out.println(binaryHeap); // Печать содержимого кучи
+        System.out.println("Минимальное значение: " + binaryHeap.removeMin());
+        System.out.println(binaryHeap); // После удаления
+    }
+}
+
+                                                                                                                                                            Биноминальная куча 
+
+import java.util.LinkedList;
+import java.util.Queue;
+
+class Node {
+    int key;
+    Node parent;
+    Node child;
+    Node sibling;
+    int degree;
+
+    public Node(int key) {
+        this.key = key;
+        this.degree = 0;
+        this.parent = null;
+        this.child = null;
+        this.sibling = null;
+    }
+}
+
+public class BinomialHeap {
+    private Queue<Node> roots;
+
+    public BinomialHeap() {
+        roots = new LinkedList<>();
+    }
+
+    // Метод добавления нового элемента
+    public void insert(int key) {
+        BinomialHeap singleNodeHeap = createSingleNodeHeap(key);
+        union(singleNodeHeap);
+    }
+
+    // Создание одиночного биноминального дерева
+    private BinomialHeap createSingleNodeHeap(int key) {
+        BinomialHeap heap = new BinomialHeap();
+        Node newNode = new Node(key);
+        heap.roots.offer(newNode);
+        return heap;
+    }
+
+    // Найти минимальное значение
+    public int findMin() {
+        int minKey = Integer.MAX_VALUE;
+        for (Node root : roots) {
+            if (root.key < minKey) {
+                minKey = root.key;
+            }
+        }
+        return minKey;
+    }
+
+    // Извлечь минимум
+    public int extractMin() {
+        Node minRoot = null;
+        for (Node root : roots) {
+            if ((minRoot == null) || (root.key < minRoot.key)) {
+                minRoot = root;
+            }
+        }
+
+        if (minRoot != null) {
+            roots.remove(minRoot);
+            BinomialHeap childHeap = convertChildrenToHeap(minRoot);
+            union(childHeap);
+            return minRoot.key;
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    // Преобразовать список потомков в новую кучу
+    private BinomialHeap convertChildrenToHeap(Node root) {
+        BinomialHeap newHeap = new BinomialHeap();
+        Node child = root.child;
+        while (child != null) {
+            Node nextSibling = child.sibling;
+            child.parent = null;
+            child.sibling = null;
+            newHeap.roots.offer(child);
+            child = nextSibling;
+        }
+        return newHeap;
+    }
+
+    // Объединение двух биномиальных куч
+    public void union(BinomialHeap otherHeap) {
+        Queue<Node> combinedRoots = new LinkedList<>(roots);
+        combinedRoots.addAll(otherHeap.roots);
+        roots.clear();
+        combineTrees(combinedRoots);
+    }
+
+    // Объединяем деревья одинаковой степени
+    private void combineTrees(Queue<Node> trees) {
+        if (trees.isEmpty()) return;
+
+        Queue<Node> processed = new LinkedList<>();
+        while (!trees.isEmpty()) {
+            Node x = trees.poll();
+            boolean done = false;
+            while (!done && !processed.isEmpty()) {
+                Node lastProcessed = processed.peekLast();
+                if (lastProcessed.degree != x.degree ||
+                        hasNextSameDegree(trees, x.degree)) {
+                    processed.offer(x);
+                    done = true;
+                } else {
+                    processed.pollLast();
+                    if (lastProcessed.key <= x.key) {
+                        attach(lastProcessed, x);
+                        x = lastProcessed;
+                    } else {
+                        attach(x, lastProcessed);
+                    }
+                }
+            }
+            if (!done) processed.offer(x);
+        }
+        roots.addAll(processed);
+    }
+
+    // Проверка наличия следующего дерева той же степени
+    private boolean hasNextSameDegree(Queue<Node> q, int degree) {
+        return !q.isEmpty() && q.peek().degree == degree;
+    }
+
+    // Присоединить одно дерево к другому
+    private void attach(Node parent, Node child) {
+        child.parent = parent;
+        child.sibling = parent.child;
+        parent.child = child;
+        parent.degree++;
+    }
+
+    // Отладочная печать
+    public void print() {
+        for (Node root : roots) {
+            System.out.print(root.key + ", ");
+        }
+        System.out.println();
+    }
+}
+
+// Тестируем биноминальную кучу
+public class Main {
+    public static void main(String[] args) {
+        BinomialHeap binomHeap = new BinomialHeap();
+        binomHeap.insert(10);
+        binomHeap.insert(5);
+        binomHeap.insert(15);
+        binomHeap.insert(3);
+        binomHeap.print(); // Показываем содержимое кучи
+        System.out.println("Минимальное значение: " + binomHeap.findMin());
+        System.out.println("Удалили минимум: " + binomHeap.extractMin());
+        binomHeap.print(); // После удаления
+    }
+}
+
+                                                                                                                                                                                  Куча Фибоначчи 
+
+public class Fibonacci {
+    public static long fibonacci(long n) {
+        if (n == 0) { return 0; }
+        else if (n == 1) { return 1; }
+        else { return fibonacci(n - 1) + fibonacci(n - 2); }
+    }
+    
+    public static void main(String args[]) {
+        System.out.println("Value of 25th number in fibonacci series — "+fibonacci(25));
+    }
+}
+
+
+// Хеш-таблицы Hashtable
+import java.util.Hashtable;
+
+public class GFG {
+    public static void main(String args[]) {
+        // Создать хэш-таблицу с ключами String и значениями Integer
+        Hashtable<String, Integer> ht = new Hashtable<>();
+        
+        // Добавить элементы в хэш-таблицу
+        ht.put("One", 1);
+        ht.put("Two", 2);
+        ht.put("Three", 3);
+        
+        // Отобразить элементы хэш-таблицы
+        System.out.println("Hashtable Elements: " + ht);
+    }
+}
+
+                                                                                                                                                                            Хеш таблицы
+
+import java.util.HashMap;
+
+public class ExampleHashMap {
+    public static void main(String args[]) {
+        // Создать HashMap
+        HashMap<String, Integer> hashMap = new HashMap<>();
+        
+        // Добавить элементы в HashMap
+        hashMap.put("John", 25);
+        hashMap.put("Jane", 30);
+        hashMap.put("Jim", 35);
+        
+        // Доступ к элементам в HashMap
+        System.out.println(hashMap.get("John"));
+        
+        // Удалить элемент из HashMap
+        hashMap.remove("Jim");
+        
+        // Проверить, есть ли элемент в HashMap
+        System.out.println(hashMap.containsKey("Jim"));
+        
+        // Получить размер HashMap
+        System.out.println(hashMap.size());
+    }
+}
